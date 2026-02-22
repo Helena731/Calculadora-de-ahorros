@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calculadora de Ahorros</title>
+  <meta name="description" content="Calcula cómo crecerá tu dinero con el interés compuesto. Visualiza tus ahorros, aportaciones e intereses generados de forma clara y visual." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0b0e1a;
+      --surface: #13172a;
+      --surface2: #1c2140;
+      --border: rgba(255,255,255,0.07);
+      --accent: #7c6dfa;
+      --accent2: #4fd1c5;
+      --text: #e8eaf7;
+      --muted: #7a7fa8;
+      --contributed: #7c6dfa;
+      --interest: #4fd1c5;
+      --radius: 20px;
+      --radius-sm: 12px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 0;
+    }
+
+    /* ── HEADER ── */
+    header {
+      text-align: center;
+      padding: 60px 24px 40px;
+      background: radial-gradient(ellipse at 50% 0%, rgba(124,109,250,0.18) 0%, transparent 70%);
+    }
+
+    header h1 {
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, #c4bcff 0%, #7c6dfa 40%, #4fd1c5 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 12px;
+    }
+
+    header p {
+      color: var(--muted);
+      font-size: 1rem;
+      font-weight: 400;
+      max-width: 480px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    /* ── LAYOUT ── */
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px 80px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    @media (max-width: 860px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    /* ── CARD ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+    }
+
+    .card-title {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 24px;
+    }
+
+    /* ── INPUTS ── */
+    .input-group {
+      margin-bottom: 22px;
+    }
+
+    .input-group label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 8px;
+      letter-spacing: 0.01em;
+    }
+
+    .input-group label .icon {
+      font-size: 1rem;
+    }
+
+    .input-row {
+      display: flex;
+      align-items: center;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+
+    .input-row:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(124,109,250,0.15);
+    }
+
+    .input-row .prefix {
+      padding: 0 14px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--accent);
+      background: rgba(124,109,250,0.1);
+      height: 48px;
+      display: flex;
+      align-items: center;
+      border-right: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    .input-row input[type="number"] {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 1rem;
+      font-weight: 600;
+      padding: 0 16px;
+      height: 48px;
+      width: 100%;
+      -moz-appearance: textfield;
+    }
+
+    .input-row input[type="number"]::-webkit-outer-spin-button,
+    .input-row input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+    /* Slider */
+    .slider-wrap {
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      flex: 1;
+      height: 4px;
+      border-radius: 99px;
+      background: var(--surface2);
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 4px rgba(124,109,250,0.25);
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+    .slider-val {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--accent2);
+      min-width: 40px;
+      text-align: right;
+    }
+
+    /* ── SUMMARY STATS ── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 600px) {
+      .stats-row { grid-template-columns: 1fr; }
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 20px 16px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      border-radius: 99px 99px 0 0;
+    }
+
+    .stat-card.invested::before { background: var(--contributed); }
+    .stat-card.interest::before { background: var(--interest); }
+    .stat-card.total::before { background: linear-gradient(90deg, var(--contributed), var(--interest)); }
+
+    .stat-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .stat-value {
+      font-size: clamp(1.1rem, 2.5vw, 1.5rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .stat-card.invested .stat-value { color: var(--contributed); }
+    .stat-card.interest .stat-value { color: var(--interest); }
+    .stat-card.total .stat-value {
+      background: linear-gradient(135deg, var(--contributed), var(--interest));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .stat-sub {
+      font-size: 0.7rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* ── CHARTS ── */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 700px) {
+      .charts-grid { grid-template-columns: 1fr; }
+    }
+
+    .chart-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 20px;
+    }
+
+    .chart-title {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.3;
+    }
+
+    .chart-sub {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 3px;
+    }
+
+    .chart-badge {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 99px;
+      background: rgba(124,109,250,0.15);
+      color: var(--accent);
+      border: 1px solid rgba(124,109,250,0.25);
+    }
+
+    .chart-wrap {
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .chart-wrap canvas { max-height: 240px; }
+
+    /* Donut center label */
+    .donut-center {
+      position: absolute;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    .donut-center .dc-pct {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--interest);
+      line-height: 1;
+    }
+
+    .donut-center .dc-label {
+      font-size: 0.65rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-top: 4px;
+    }
+
+    /* ── LEGEND ── */
+    .legend {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    .legend-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* ── PROJECTION NOTE ── */
+    .note {
+      background: rgba(124,109,250,0.06);
+      border: 1px solid rgba(124,109,250,0.15);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      font-size: 0.78rem;
+      color: var(--muted);
+      line-height: 1.6;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+
+    .note .note-icon { flex-shrink: 0; font-size: 1rem; }
+
+    /* ── ALREADY AT 65 MSG ── */
+    .warning-card {
+      background: rgba(250,150,100,0.08);
+      border: 1px solid rgba(250,150,100,0.2);
+      border-radius: var(--radius);
+      padding: 28px;
+      text-align: center;
+      color: #fa9664;
+    }
+
+    .warning-card h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; }
+    .warning-card p  { font-size: 0.85rem; color: var(--muted); }
+
+    /* ── ANIMATIONS ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .anim { animation: fadeUp 0.5s ease both; }
+    .anim-d1 { animation-delay: 0.05s; }
+    .anim-d2 { animation-delay: 0.10s; }
+    .anim-d3 { animation-delay: 0.15s; }
+    .anim-d4 { animation-delay: 0.20s; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>💰 Calculadora de Ahorros</h1>
+  <p>Descubre cuánto crecerá tu dinero con el poder del interés compuesto</p>
+</header>
+
+<div class="container">
+  <div class="grid">
+
+    <!-- ── LEFT: INPUTS ── -->
+    <div class="card anim">
+      <div class="card-title">📊 Configura tu plan</div>
+
+      <div class="input-group">
+        <label><span class="icon">💵</span> Capital inicial</label>
+        <div class="input-row">
+          <span class="prefix">€</span>
+          <input type="number" id="capital" value="10000" min="0" step="500" aria-label="Capital inicial en euros" />
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label><span class="icon">🎂</span> Tu edad actual</label>
+        <div class="input-row">
+          <span class="prefix">años</span>
+          <input type="number" id="edad" value="30" min="1" max="64" step="1" aria-label="Edad actual" />
+        </div>
+        <div class="slider-wrap">
+          <input type="range" id="edadRange" min="1" max="64" value="30" aria-label="Slider de edad" />
+          <span class="slider-val" id="edadVal">30</span>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label><span class="icon">📈</span> Interés anual esperado</label>
+        <div class="input-row">
+          <span class="prefix">%</span>
+          <input type="number" id="interes" value="7" min="0.1" max="30" step="0.1" aria-label="Interés anual en porcentaje" />
+        </div>
+        <div class="slider-wrap">
+          <input type="range" id="interesRange" min="0.1" max="20" step="0.1" value="7" aria-label="Slider de interés" />
+          <span class="slider-val" id="interesVal">7%</span>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label><span class="icon">🗓️</span> Aportación mensual</label>
+        <div class="input-row">
+          <span class="prefix">€/mes</span>
+          <input type="number" id="aportacion" value="300" min="0" step="50" aria-label="Aportación mensual en euros" />
+        </div>
+      </div>
+    </div>
+
+    <!-- ── RIGHT: RESULTS ── -->
+    <div id="results-area">
+
+      <!-- STATS -->
+      <div class="stats-row anim anim-d1">
+        <div class="stat-card invested">
+          <div class="stat-label">Total aportado</div>
+          <div class="stat-value" id="statInvested">—</div>
+          <div class="stat-sub">Tu dinero puesto</div>
+        </div>
+        <div class="stat-card interest">
+          <div class="stat-label">Intereses ganados</div>
+          <div class="stat-value" id="statInterest">—</div>
+          <div class="stat-sub">El mercado trabajó</div>
+        </div>
+        <div class="stat-card total">
+          <div class="stat-label">Capital final</div>
+          <div class="stat-value" id="statTotal">—</div>
+          <div class="stat-sub">A los 65 años</div>
+        </div>
+      </div>
+
+      <!-- CHARTS -->
+      <div class="charts-grid anim anim-d2" id="chartsGrid">
+
+        <!-- PIE CHART -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Distribución del capital</div>
+              <div class="chart-sub">Aportado vs. Intereses</div>
+            </div>
+            <span class="chart-badge">A los 65</span>
+          </div>
+          <div class="chart-wrap" style="height:240px;">
+            <canvas id="pieChart" aria-label="Gráfico circular de distribución del capital"></canvas>
+            <div class="donut-center" id="donutCenter">
+              <div class="dc-pct" id="donutPct">0%</div>
+              <div class="dc-label">intereses</div>
+            </div>
+          </div>
+          <div class="legend">
+            <div class="legend-item">
+              <div class="legend-dot" style="background:var(--contributed)"></div>
+              Total aportado
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot" style="background:var(--interest)"></div>
+              Intereses ganados
+            </div>
+          </div>
+        </div>
+
+        <!-- LINE CHART -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Evolución año a año</div>
+              <div class="chart-sub">Crecimiento del capital</div>
+            </div>
+            <span class="chart-badge" style="background:rgba(79,209,197,0.12);color:var(--interest);border-color:rgba(79,209,197,0.25);">Proyección</span>
+          </div>
+          <div class="chart-wrap" style="height:240px;">
+            <canvas id="lineChart" aria-label="Gráfico de línea de evolución del capital"></canvas>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- NOTE -->
+      <div class="note anim anim-d3">
+        <span class="note-icon">💡</span>
+        <span>Esta calculadora usa <strong>interés compuesto</strong> con capitalización mensual. Los rendimientos reales pueden variar según el mercado. Este cálculo es meramente orientativo.</span>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  // ─── UTILS ────────────────────────────────────────────────────────────────
+  const fmt = (n) => new Intl.NumberFormat('es-ES', {
+    style: 'currency', currency: 'EUR', maximumFractionDigits: 0
+  }).format(n);
+
+  // ─── DOM REFS ─────────────────────────────────────────────────────────────
+  const $capital    = document.getElementById('capital');
+  const $edad       = document.getElementById('edad');
+  const $edadRange  = document.getElementById('edadRange');
+  const $edadVal    = document.getElementById('edadVal');
+  const $interes    = document.getElementById('interes');
+  const $interesRange = document.getElementById('interesRange');
+  const $interesVal = document.getElementById('interesVal');
+  const $aportacion = document.getElementById('aportacion');
+
+  const $statInvested = document.getElementById('statInvested');
+  const $statInterest = document.getElementById('statInterest');
+  const $statTotal    = document.getElementById('statTotal');
+  const $donutPct     = document.getElementById('donutPct');
+  const $donutCenter  = document.getElementById('donutCenter');
+
+  // ─── CHART INSTANCES ──────────────────────────────────────────────────────
+  let pieChartInst = null;
+  let lineChartInst = null;
+
+  // ─── CHART.JS GLOBAL DEFAULTS ─────────────────────────────────────────────
+  Chart.defaults.color = '#7a7fa8';
+  Chart.defaults.font.family = 'Inter';
+
+  // ─── CALCULATE ────────────────────────────────────────────────────────────
+  function calculate() {
+    const capital    = parseFloat($capital.value) || 0;
+    const edad       = parseInt($edad.value) || 0;
+    const interesAnual = parseFloat($interes.value) || 0;
+    const aportacion = parseFloat($aportacion.value) || 0;
+
+    const yearsLeft = 65 - edad;
+
+    if (yearsLeft <= 0) {
+      renderWarning();
+      return;
+    }
+
+    const r = interesAnual / 100 / 12; // monthly rate
+    const months = yearsLeft * 12;
+
+    // Year-by-year data
+    const labels = [];
+    const capitalData = [];
+    const aportadoData = [];
+    const interesData = [];
+
+    for (let y = 0; y <= yearsLeft; y++) {
+      const m = y * 12;
+      // FV of lump sum
+      const fvCapital = capital * Math.pow(1 + r, m);
+      // FV of annuity (monthly contributions)
+      const fvAportaciones = r === 0
+        ? aportacion * m
+        : aportacion * (Math.pow(1 + r, m) - 1) / r;
+
+      const totalCapital  = fvCapital + fvAportaciones;
+      const totalAportado = capital + aportacion * m;
+      const totalInteres  = totalCapital - totalAportado;
+
+      labels.push(edad + y);
+      capitalData.push(totalCapital);
+      aportadoData.push(totalAportado);
+      interesData.push(Math.max(0, totalInteres));
+    }
+
+    const finalCapital  = capitalData[capitalData.length - 1];
+    const finalAportado = aportadoData[aportadoData.length - 1];
+    const finalInteres  = Math.max(0, finalCapital - finalAportado);
+    const pctInteres    = finalCapital > 0 ? Math.round((finalInteres / finalCapital) * 100) : 0;
+
+    // ── Stats
+    $statInvested.textContent = fmt(finalAportado);
+    $statInterest.textContent = fmt(finalInteres);
+    $statTotal.textContent    = fmt(finalCapital);
+    $donutPct.textContent     = pctInteres + '%';
+
+    // ── Pie Chart
+    const pieData = {
+      datasets: [{
+        data: [finalAportado, finalInteres],
+        backgroundColor: ['#7c6dfa', '#4fd1c5'],
+        hoverBackgroundColor: ['#9b8ffb', '#73e8df'],
+        borderWidth: 0,
+        hoverOffset: 8,
+      }]
+    };
+
+    if (pieChartInst) {
+      pieChartInst.data = pieData;
+      pieChartInst.update('active');
+    } else {
+      const ctx = document.getElementById('pieChart').getContext('2d');
+      pieChartInst = new Chart(ctx, {
+        type: 'doughnut',
+        data: pieData,
+        options: {
+          cutout: '68%',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => {
+                  const label = ctx.dataIndex === 0 ? 'Aportado' : 'Intereses';
+                  return ` ${label}: ${fmt(ctx.raw)}`;
+                }
+              },
+              backgroundColor: '#1c2140',
+              padding: 12,
+              cornerRadius: 10,
+              titleFont: { weight: 700, size: 13 },
+              bodyFont: { size: 12 },
+            }
+          },
+          animation: { animateRotate: true, duration: 600, easing: 'easeOutQuart' }
+        }
+      });
+    }
+
+    // ── Position donut center label
+    positionDonutCenter();
+
+    // ── Line Chart
+    const lineData = {
+      labels,
+      datasets: [
+        {
+          label: 'Capital total',
+          data: capitalData,
+          borderColor: '#7c6dfa',
+          backgroundColor: createGradient('lineChart', '#7c6dfa', '#4fd1c5'),
+          borderWidth: 2.5,
+          pointRadius: 0,
+          pointHoverRadius: 6,
+          tension: 0.4,
+          fill: true,
+        },
+        {
+          label: 'Total aportado',
+          data: aportadoData,
+          borderColor: '#4fd1c5',
+          backgroundColor: 'transparent',
+          borderWidth: 1.5,
+          borderDash: [6, 4],
+          pointRadius: 0,
+          pointHoverRadius: 5,
+          tension: 0.4,
+          fill: false,
+        }
+      ]
+    };
+
+    if (lineChartInst) {
+      lineChartInst.data = lineData;
+      lineChartInst.update('active');
+    } else {
+      const ctx2 = document.getElementById('lineChart').getContext('2d');
+      lineChartInst = new Chart(ctx2, {
+        type: 'line',
+        data: lineData,
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: {
+              display: true,
+              position: 'bottom',
+              labels: {
+                boxWidth: 12,
+                boxHeight: 12,
+                borderRadius: 6,
+                useBorderRadius: true,
+                padding: 16,
+                font: { size: 11, weight: '600' }
+              }
+            },
+            tooltip: {
+              backgroundColor: '#1c2140',
+              padding: 12,
+              cornerRadius: 10,
+              titleFont: { weight: 700, size: 12 },
+              bodyFont: { size: 11 },
+              callbacks: {
+                title: (items) => `Edad: ${items[0].label} años`,
+                label: (ctx) => ` ${ctx.dataset.label}: ${fmt(ctx.raw)}`
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false },
+              ticks: { font: { size: 10, weight: '500' }, maxTicksLimit: 8 }
+            },
+            y: {
+              grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false },
+              ticks: {
+                font: { size: 10 },
+                callback: (v) => {
+                  if (v >= 1000000) return (v/1000000).toFixed(1) + 'M€';
+                  if (v >= 1000) return (v/1000).toFixed(0) + 'k€';
+                  return v + '€';
+                }
+              }
+            }
+          },
+          animation: { duration: 500, easing: 'easeOutQuart' }
+        }
+      });
+    }
+  }
+
+  function createGradient(canvasId, color1, color2) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return color1;
+    const ctx = canvas.getContext('2d');
+    const grad = ctx.createLinearGradient(0, 0, 0, 240);
+    grad.addColorStop(0, hexToRgba(color1, 0.35));
+    grad.addColorStop(0.6, hexToRgba(color2, 0.1));
+    grad.addColorStop(1, hexToRgba(color2, 0.0));
+    return grad;
+  }
+
+  function hexToRgba(hex, alpha) {
+    const r = parseInt(hex.slice(1,3),16);
+    const g = parseInt(hex.slice(3,5),16);
+    const b = parseInt(hex.slice(5,7),16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+
+  function positionDonutCenter() {
+    // The donut center div is positioned absolute inside chart-wrap
+    // Just let CSS handle it via flexbox
+  }
+
+  function renderWarning() {
+    $statInvested.textContent = '—';
+    $statInterest.textContent = '—';
+    $statTotal.textContent    = '—';
+    $donutPct.textContent     = '0%';
+    if (pieChartInst)  { pieChartInst.destroy();  pieChartInst  = null; }
+    if (lineChartInst) { lineChartInst.destroy(); lineChartInst = null; }
+  }
+
+  // ─── SLIDER SYNC ──────────────────────────────────────────────────────────
+  $edadRange.addEventListener('input', () => {
+    $edad.value   = $edadRange.value;
+    $edadVal.textContent = $edadRange.value;
+    calculate();
+  });
+
+  $edad.addEventListener('input', () => {
+    $edadRange.value = $edad.value;
+    $edadVal.textContent = $edad.value;
+    calculate();
+  });
+
+  $interesRange.addEventListener('input', () => {
+    $interes.value = $interesRange.value;
+    $interesVal.textContent = parseFloat($interesRange.value).toFixed(1) + '%';
+    calculate();
+  });
+
+  $interes.addEventListener('input', () => {
+    $interesRange.value = $interes.value;
+    $interesVal.textContent = parseFloat($interes.value || 0).toFixed(1) + '%';
+    calculate();
+  });
+
+  $capital.addEventListener('input', calculate);
+  $aportacion.addEventListener('input', calculate);
+
+  // ─── INIT ─────────────────────────────────────────────────────────────────
+  calculate();
+</script>
+</body>
+</html>
